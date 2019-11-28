@@ -1,5 +1,5 @@
 /**
- * Stock data for a particular company
+ * Stock data for an interval
  **/
 
 import java.util.ArrayList;
@@ -8,27 +8,25 @@ import java.util.LinkedList;
 
 public class CompanyDataInterval {
 
-    private int intervalNum;
     private Deque<MarketDay> days;
     private Deque<MarketDay> adjustedDays;
     private ArrayList<Split> splits;
     private int numDays;
 
-    public CompanyDataInterval(int intervalNum) {
-        this.intervalNum = intervalNum;
+    public CompanyDataInterval() {
         days = new LinkedList<MarketDay>();
         splits = new ArrayList<Split>();
         adjustedDays = new LinkedList<MarketDay>();
     }
 
-    public int getIntervalNum() { return intervalNum; }
+    public Deque<MarketDay> getDays() { return days; }
 
-    public void addDay(MarketDay m) {
-        days.add(m);
-    }
+    public Deque<MarketDay> getAdjustedDays() { return adjustedDays; }
+
+    public void addDay(MarketDay m) { days.add(m); }
 
     //Adjust data to account for price variance (splits)
-    public void adjustForSplits() {
+    public double adjustForSplits() {
         double divisor = 1;
         boolean canPull = true;
         while (canPull) {
@@ -56,6 +54,7 @@ public class CompanyDataInterval {
             adjustedDays.add(current);
             numDays++;
         }
+        return divisor;
     }
 
     public void printAdjustedSplits() {

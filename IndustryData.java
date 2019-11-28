@@ -9,11 +9,12 @@ public class IndustryData {
     private String endDate;
     private int commonDays;
 
-    public IndustryData(String name, ArrayList<CompanyData> tickerList, String startDate, String endDate) {
+    public IndustryData(String name, ArrayList<CompanyData> tickerList, String startDate, String endDate, int commonDays) {
         this.tickerList = tickerList;
         this.name = name;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.commonDays = commonDays;
     }
 
     public ArrayList<CompanyData> getTickerList() {

@@ -101,7 +101,7 @@ public class Assignment3Main {
             for (String industry : industries) {
                 System.out.printf("%s%n", industry);
             }
-            System.out.println();            
+            System.out.println();
             
 			for (String industry : industries) {
                 System.out.printf("Processing %s%n", industry);
@@ -173,45 +173,58 @@ public class Assignment3Main {
             companies.add(new CompanyData(tickerResults.getString("ticker")));
         }
 
-        for (int i = 0; i < companies.size(); i++) {
-            PreparedStatement prepstDays = readerConn.prepareStatement(getDatesQuery);
-            prepstDays.setString(1, industry);
-            prepstDays.setInt(2, 150);
-            ResultSet daysResults = prepstDays.executeQuery();
-            daysResults.next();
-            String beginDateRange = daysResults.getString("first");
-            String endDateRange = daysResults.getString("last");
+        PreparedStatement prepstDays = readerConn.prepareStatement(getDatesQuery);
+        prepstDays.setString(1, industry);
+        prepstDays.setInt(2, 150);
+        ResultSet daysResults = prepstDays.executeQuery();
+        daysResults.next();
+        String beginDateRange = daysResults.getString("first");
+        String endDateRange = daysResults.getString("last");
 
-            PreparedStatement prepstFinalDays = readerConn.prepareStatement(getTickerDatesQuery);
-            prepstFinalDays.setString(1, industry);
-            prepstFinalDays.setString(2, beginDateRange);
-            prepstFinalDays.setString(3, endDateRange);
-            prepstFinalDays.setInt(4, 150);
-            ResultSet finalDaysResults = prepstFinalDays.executeQuery();
-            finalDaysResults.next();
-            String startDate = finalDaysResults.getString("StartDate");
-            String endDate = finalDaysResults.getString("endDate");
+        PreparedStatement prepstFinalDays = readerConn.prepareStatement(getTickerDatesQuery);
+        prepstFinalDays.setString(1, industry);
+        prepstFinalDays.setString(2, beginDateRange);
+        prepstFinalDays.setString(3, endDateRange);
+        prepstFinalDays.setInt(4, 150);
+        ResultSet finalDaysResults = prepstFinalDays.executeQuery();
+        finalDaysResults.next();
+        String startDate = finalDaysResults.getString("StartDate");
+        String endDate = finalDaysResults.getString("endDate");
 
-            PreparedStatement prepstMinDays = readerConn.prepareStatement(getMinTradingDaysQuery);
-            prepstFinalDays.setString(1, industry);
-            prepstFinalDays.setString(2, beginDateRange);
-            prepstFinalDays.setString(3, endDateRange);
-            prepstFinalDays.setInt(4, 150);
-            ResultSet minDaysResult = prepstMinDays.executeQuery();
-            minDaysResult.next();
-            int minTradingDays = minDaysResult.getInt("min(tradingDays)");
+        PreparedStatement prepstMinDays = readerConn.prepareStatement(getMinTradingDaysQuery);
+        prepstFinalDays.setString(1, industry);
+        prepstFinalDays.setString(2, beginDateRange);
+        prepstFinalDays.setString(3, endDateRange);
+        prepstFinalDays.setInt(4, 150);
+        ResultSet minDaysResult = prepstMinDays.executeQuery();
+        minDaysResult.next();
+        int minTradingDays = minDaysResult.getInt("min(tradingDays)");
 
-            PreparedStatement prepstPriceData = readerConn.prepareStatement(getIndustryPriceDataQuery);
-            prepstPriceData.setString(1, industry);
-            prepstPriceData.setString(2, startDate);
-            prepstPriceData.setString(3, startDate);
+        int intervals = minTradingDays/60;
+
+        PreparedStatement prepstPriceData = readerConn.prepareStatement(getIndustryPriceDataQuery);
+        prepstPriceData.setString(1, industry);
+        prepstPriceData.setString(2, startDate);
+        prepstPriceData.setString(3, startDate);
+        for (CompanyData c : companies) {
+
+            //Read in and adjust for splits in one big interval per company
+            c.addInterval();
             ResultSet priceDataResults = prepstPriceData.executeQuery();
             while (priceDataResults.next()) {
-
+                String ticker = c.getTicker();
+                String date = priceDataResults.getString("Ticker");
+                double open = priceDataResults.getDouble("OpenPrice");
+                double close = priceDataResults.getDouble("ClosePrice");
+                c.getInterval(0).addDay(new MarketDay(ticker, date, open, close));
             }
+            c.getInterval(0).adjustForSplits();
+
+            //Split up the intervals
+            c.splitIntervals();
         }
 
-        return new IndustryData(industry, companies, "1", "2");
+        return new IndustryData(industry, companies, startDate, endDate, minTradingDays);
     }
     
     static void processIndustryGains(String industry, IndustryData data) throws SQLException {

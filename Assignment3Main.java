@@ -122,6 +122,7 @@ public class Assignment3Main {
         } catch (SQLException ex) {
             System.out.printf("SQLException: %s%nSQLState: %s%nVendorError: %s%n",
                                     ex.getMessage(), ex.getSQLState(), ex.getErrorCode());
+            ex.printStackTrace();
         }
     }
     
@@ -192,10 +193,10 @@ public class Assignment3Main {
         String endDate = finalDaysResults.getString("endDate");
 
         PreparedStatement prepstMinDays = readerConn.prepareStatement(getMinTradingDaysQuery);
-        prepstFinalDays.setString(1, industry);
-        prepstFinalDays.setString(2, beginDateRange);
-        prepstFinalDays.setString(3, endDateRange);
-        prepstFinalDays.setInt(4, 150);
+        prepstMinDays.setString(1, industry);
+        prepstMinDays.setString(2, beginDateRange);
+        prepstMinDays.setString(3, endDateRange);
+        prepstMinDays.setInt(4, 150);
         ResultSet minDaysResult = prepstMinDays.executeQuery();
         minDaysResult.next();
         int minTradingDays = minDaysResult.getInt("min(tradingDays)");
@@ -219,9 +220,10 @@ public class Assignment3Main {
                 c.getInterval(0).addDay(new MarketDay(ticker, date, open, close));
             }
             c.getInterval(0).adjustForSplits();
+            System.out.printf("Processing company %s\n", c.getTicker());
 
             //Split up the intervals
-            c.splitIntervals();
+            //c.splitIntervals();
         }
 
         return new IndustryData(industry, companies, startDate, endDate, minTradingDays);

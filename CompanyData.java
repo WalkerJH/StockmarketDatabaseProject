@@ -26,19 +26,11 @@ public class CompanyData {
 
     //Split up one interval into as many as needed
     public void splitIntervals() {
-        int numDays = intervals.get(0).getDays().size();
-        for (int i = 0; i < numDays; i++) {
-            int j = 0;
-            int currentInterval = 0;
-            addInterval();
-            while (intervals.get(0).getDays().size() > 0) {
-                if (j < 60) {
-                    
-                }
-                else {
-                    j++;
-                }
-            }
+        this.addInterval();
+        int currentInterval = 0;
+        for (int i = 0; i < 60; i++) {
+            MarketDay day = intervals.get(currentInterval).getDays().removeLast();
+            //intervals.get(currentInterval+1).getDays().addFirst();
         }
     }
 }

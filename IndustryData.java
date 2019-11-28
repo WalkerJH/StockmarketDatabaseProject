@@ -2,25 +2,26 @@ import java.util.ArrayList;
 
 public class IndustryData {
 
-    private ArrayList<String> tickerList;
-    private String industry;
+    private ArrayList<CompanyData> tickerList;
+
+    private String name;
     private String startDate;
     private String endDate;
     private int commonDays;
 
-    public IndustryData(ArrayList<String> tickerList, String industry, String startDate, String endDate) {
+    public IndustryData(String name, ArrayList<CompanyData> tickerList, String startDate, String endDate) {
         this.tickerList = tickerList;
-        this.industry = industry;
+        this.name = name;
         this.startDate = startDate;
         this.endDate = endDate;
     }
 
-    public ArrayList<String> getTickerList() {
+    public ArrayList<CompanyData> getTickerList() {
         return tickerList;
     }
 
-    public String getIndustry() {
-        return industry;
+    public String getName() {
+        return name;
     }
 
     public String getStartDate() {

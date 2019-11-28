@@ -17,6 +17,13 @@ public class MarketDay {
     private double newLow;
     private double newClosing;
 
+    public MarketDay(String ticker, String date, double opening, double closing) {
+        this.ticker = ticker;
+        this.date = date;
+        this.opening = opening;
+        this.closing = closing;
+    }
+
     public MarketDay(String ticker, String date, double opening, double high, double low,
                      double closing, int shares, double adjustedClosing) {
         this.ticker = ticker;

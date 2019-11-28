@@ -1,4 +1,7 @@
-
+/*
+* CS 330 Project 3
+* Walker Herring
+*/
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -19,14 +22,14 @@ public class Assignment3Main {
 	// Other variables
 	    
     static final String getDatesQuery =
-        "select max(startDate), min(endDate)" +
+        "select max(startDate) as first, min(endDate) as last" +
         "  from (select Ticker, min(TransDate) as StartDate, max(TransDate) as endDate," +
         "            count(distinct TransDate) as tradingDays" +
         "          from Company natural join PriceVolume" +
         "          where Industry = ?" +
         "          group by Ticker" +
         "          having tradingDays >= ?) as TickerDates";
-    
+
     static final String getTickerDatesQuery = 
         "select Ticker, min(TransDate) as StartDate, max(TransDate) as endDate," +
         "      count(distinct TransDate) as tradingDays" +
@@ -36,6 +39,16 @@ public class Assignment3Main {
         "  group by Ticker" +
         "  having tradingDays >= ?" +
         "  order by Ticker";
+
+    static final String getMinTradingDaysQuery =
+        "select min(tradingDays)" +
+            " from (select count(distinct TransDate) as tradingDays" +
+                    "  from Company natural join PriceVolume" +
+                    "  where Industry = ?" +
+                    "    and TransDate >= ? and TransDate <= ?" +
+                    "  group by Ticker" +
+                    "  having tradingDays >= ?" +
+                    "  order by Ticker) as tradingDaysNums";
         
     static final String getIndustryPriceDataQuery =
         "select Ticker, TransDate, OpenPrice, ClosePrice" +
@@ -48,7 +61,11 @@ public class Assignment3Main {
             "select distinct Industry" +
             "  from Company" +
             "  order by Industry";		
-        
+
+	static final String getTickersByIndustry =
+            "select ticker from Company" +
+            "   where industry = ?";
+
     static final String dropPerformanceTable =
         "drop table if exists Performance;";
 
@@ -114,10 +131,10 @@ public class Assignment3Main {
         readerConn = DriverManager.getConnection(dburl, connectProps);
         System.out.printf("Reader connection %s %s established.%n", dburl, username);
 
-        getDates = readerConn.prepareStatement(getDatesQuery);
-        getTickerDates = readerConn.prepareStatement(getTickerDatesQuery);
-        getIndustryPriceData = readerConn.prepareStatement(getIndustryPriceDataQuery);
-    } 
+        //getDates = readerConn.prepareStatement(getDatesQuery);
+        //getTickerDates = readerConn.prepareStatement(getTickerDatesQuery);
+        //getIndustryPriceData = readerConn.prepareStatement(getIndustryPriceDataQuery);
+    }
     
     
     static void setupWriter(Properties connectProps) throws SQLException {
@@ -132,31 +149,82 @@ public class Assignment3Main {
         tstmt.execute(createPerformanceTable);
         tstmt.close();
         
-        insertPerformanceData = writerConn.prepareStatement(insertPerformance);
+        //insertPerformanceData = writerConn.prepareStatement(insertPerformance);
     } 
     
     static List<String> getIndustries() throws SQLException {
-		List<String> result = new ArrayList<>();
-		// To Do: Execute the appropriate query (you need one of them) and return a list of the industries 
-		return result;			
+		List<String> industries = new ArrayList<>();
+        PreparedStatement prepst = readerConn.prepareStatement(getAllIndustries);
+        ResultSet industryResults = prepst.executeQuery();
+        while (industryResults.next()) {
+            industries.add(industryResults.getString("Industry"));
+        }
+		return industries;
     }
     
     static IndustryData processIndustry(String industry) throws SQLException {
-		// To Do: Execute the appropriate SQL queries (you need two of them) and return an object of IndustryData        
-        return new IndustryData(tickers, numDays, startDate, endDate);
+
+        ArrayList<CompanyData> companies = new ArrayList<CompanyData>();
+
+        PreparedStatement prepstTickers = readerConn.prepareStatement(getTickersByIndustry);
+        prepstTickers.setString(1, industry);
+        ResultSet tickerResults = prepstTickers.executeQuery();
+        while (tickerResults.next()) {
+            companies.add(new CompanyData(tickerResults.getString("ticker")));
+        }
+
+        for (int i = 0; i < companies.size(); i++) {
+            PreparedStatement prepstDays = readerConn.prepareStatement(getDatesQuery);
+            prepstDays.setString(1, industry);
+            prepstDays.setInt(2, 150);
+            ResultSet daysResults = prepstDays.executeQuery();
+            daysResults.next();
+            String beginDateRange = daysResults.getString("first");
+            String endDateRange = daysResults.getString("last");
+
+            PreparedStatement prepstFinalDays = readerConn.prepareStatement(getTickerDatesQuery);
+            prepstFinalDays.setString(1, industry);
+            prepstFinalDays.setString(2, beginDateRange);
+            prepstFinalDays.setString(3, endDateRange);
+            prepstFinalDays.setInt(4, 150);
+            ResultSet finalDaysResults = prepstFinalDays.executeQuery();
+            finalDaysResults.next();
+            String startDate = finalDaysResults.getString("StartDate");
+            String endDate = finalDaysResults.getString("endDate");
+
+            PreparedStatement prepstMinDays = readerConn.prepareStatement(getMinTradingDaysQuery);
+            prepstFinalDays.setString(1, industry);
+            prepstFinalDays.setString(2, beginDateRange);
+            prepstFinalDays.setString(3, endDateRange);
+            prepstFinalDays.setInt(4, 150);
+            ResultSet minDaysResult = prepstMinDays.executeQuery();
+            minDaysResult.next();
+            int minTradingDays = minDaysResult.getInt("min(tradingDays)");
+
+            PreparedStatement prepstPriceData = readerConn.prepareStatement(getIndustryPriceDataQuery);
+            prepstPriceData.setString(1, industry);
+            prepstPriceData.setString(2, startDate);
+            prepstPriceData.setString(3, startDate);
+            ResultSet priceDataResults = prepstPriceData.executeQuery();
+            while (priceDataResults.next()) {
+
+            }
+        }
+
+        return new IndustryData(industry, companies, "1", "2");
     }
     
     static void processIndustryGains(String industry, IndustryData data) throws SQLException {
-		// To Do: 
-		// In this method, you should calculate the ticker return and industry return. Look at the assignment description to know how to do that 
-		// Don't forget to do the split adjustment
-		// After those calculations, insert the data into the Performance table you created earlier. You may use the following way to do that for each company (or ticker) of an indsutry: 
-			// insertPerformanceData.setString(1, industry);
-			// insertPerformanceData.setString(2, ticker);
-			// insertPerformanceData.setString(3, startdate);
-			// insertPerformanceData.setString(4, enddate);
-			// insertPerformanceData.setString(5, String.format("%10.7f", tickerReturn);
-			// insertPerformanceData.setString(6, String.format("%10.7f", industryReturn);
-			// int result = insertPerformanceData.executeUpdate();
-              
+        // To Do:
+        // In this method, you should calculate the ticker return and industry return. Look at the assignment description to know how to do that
+        // Don't forget to do the split adjustment
+        // After those calculations, insert the data into the Performance table you created earlier. You may use the following way to do that for each company (or ticker) of an indsutry:
+        // insertPerformanceData.setString(1, industry);
+        // insertPerformanceData.setString(2, ticker);
+        // insertPerformanceData.setString(3, startdate);
+        // insertPerformanceData.setString(4, enddate);
+        // insertPerformanceData.setString(5, String.format("%10.7f", tickerReturn);
+        // insertPerformanceData.setString(6, String.format("%10.7f", industryReturn);
+        // int result = insertPerformanceData.executeUpdate();
+    }
 }

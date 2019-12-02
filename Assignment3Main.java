@@ -188,51 +188,60 @@ public class Assignment3Main {
         prepstFinalDays.setString(3, endDateRange);
         prepstFinalDays.setInt(4, 150);
         ResultSet finalDaysResults = prepstFinalDays.executeQuery();
-        finalDaysResults.next();
-        String startDate = finalDaysResults.getString("StartDate");
-        String endDate = finalDaysResults.getString("endDate");
+        if (finalDaysResults.next()) {
+            String startDate = finalDaysResults.getString("StartDate");
+            String endDate = finalDaysResults.getString("endDate");
 
-        PreparedStatement prepstMinDays = readerConn.prepareStatement(getMinTradingDaysQuery);
-        prepstMinDays.setString(1, industry);
-        prepstMinDays.setString(2, beginDateRange);
-        prepstMinDays.setString(3, endDateRange);
-        prepstMinDays.setInt(4, 150);
-        ResultSet minDaysResult = prepstMinDays.executeQuery();
-        minDaysResult.next();
-        int minTradingDays = minDaysResult.getInt("min(tradingDays)");
+            PreparedStatement prepstMinDays = readerConn.prepareStatement(getMinTradingDaysQuery);
+            prepstMinDays.setString(1, industry);
+            prepstMinDays.setString(2, beginDateRange);
+            prepstMinDays.setString(3, endDateRange);
+            prepstMinDays.setInt(4, 150);
+            ResultSet minDaysResult = prepstMinDays.executeQuery();
+            minDaysResult.next();
+            int minTradingDays = minDaysResult.getInt("min(tradingDays)");
 
-        int intervals = minTradingDays/60;
+            int intervals = minTradingDays / 60;
 
-        PreparedStatement prepstPriceData = readerConn.prepareStatement(getIndustryPriceDataQuery);
-        prepstPriceData.setString(1, industry);
-        prepstPriceData.setString(2, startDate);
-        prepstPriceData.setString(3, startDate);
-        for (CompanyData c : companies) {
+            PreparedStatement prepstPriceData = readerConn.prepareStatement(getIndustryPriceDataQuery);
+            prepstPriceData.setString(1, industry);
+            prepstPriceData.setString(2, startDate);
+            prepstPriceData.setString(3, startDate);
 
-            //Read in and adjust for splits in one big interval per company
-            c.addInterval();
-            ResultSet priceDataResults = prepstPriceData.executeQuery();
-            while (priceDataResults.next()) {
-                String ticker = c.getTicker();
-                String date = priceDataResults.getString("Ticker");
-                double open = priceDataResults.getDouble("OpenPrice");
-                double close = priceDataResults.getDouble("ClosePrice");
-                c.getInterval(0).addDay(new MarketDay(ticker, date, open, close));
+            for (CompanyData c : companies) {
+
+                //Read in and add intervals
+                ResultSet priceDataResults = prepstPriceData.executeQuery();
+                int dayNum = 1;
+                while (priceDataResults.next()) {
+                    String ticker = c.getTicker();
+                    String date = priceDataResults.getString("TransDate");
+                    double open = priceDataResults.getDouble("OpenPrice");
+                    double close = priceDataResults.getDouble("ClosePrice");
+                    c.addDay(new MarketDay(ticker, date, open, close));
+                    if (dayNum == 1 || (dayNum - 1) % 60 == 0) {
+                        c.openInterval(date);
+                    }
+                    if (dayNum % 60 == 0) {
+                        c.closeInterval(date);
+                    }
+                    dayNum++;
+                }
+
+                c.adjustForSplits();
+
+                //System.out.printf("Processing company %s\n", c.getTicker());
             }
-            c.getInterval(0).adjustForSplits();
-            System.out.printf("Processing company %s\n", c.getTicker());
-
-            //Split up the intervals
-            //c.splitIntervals();
+            return new IndustryData(industry, companies, startDate, endDate, minTradingDays);
+        } else {
+            System.out.printf("Insufficient data for %s, no analysis\n", industry);
+            return null;
         }
-
-        return new IndustryData(industry, companies, startDate, endDate, minTradingDays);
     }
     
     static void processIndustryGains(String industry, IndustryData data) throws SQLException {
-        // To Do:
         // In this method, you should calculate the ticker return and industry return. Look at the assignment description to know how to do that
-        // Don't forget to do the split adjustment
+
         // After those calculations, insert the data into the Performance table you created earlier. You may use the following way to do that for each company (or ticker) of an indsutry:
         // insertPerformanceData.setString(1, industry);
         // insertPerformanceData.setString(2, ticker);

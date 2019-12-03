@@ -131,10 +131,6 @@ public class Assignment3Main {
         String username = connectProps.getProperty("user");
         readerConn = DriverManager.getConnection(dburl, connectProps);
         System.out.printf("Reader connection %s %s established.%n", dburl, username);
-
-        //getDates = readerConn.prepareStatement(getDatesQuery);
-        //getTickerDates = readerConn.prepareStatement(getTickerDatesQuery);
-        //getIndustryPriceData = readerConn.prepareStatement(getIndustryPriceDataQuery);
     }
     
     
@@ -149,8 +145,6 @@ public class Assignment3Main {
         tstmt.execute(dropPerformanceTable);
         tstmt.execute(createPerformanceTable);
         tstmt.close();
-        
-        //insertPerformanceData = writerConn.prepareStatement(insertPerformance);
     } 
     
     static List<String> getIndustries() throws SQLException {
@@ -210,23 +204,16 @@ public class Assignment3Main {
 
             for (CompanyData c : companies) {
 
-                //Read in and add intervals
                 ResultSet priceDataResults = prepstPriceData.executeQuery();
-                int dayNum = 1;
+                double close = 0;
                 while (priceDataResults.next()) {
                     String ticker = c.getTicker();
                     String date = priceDataResults.getString("TransDate");
                     double open = priceDataResults.getDouble("OpenPrice");
-                    double close = priceDataResults.getDouble("ClosePrice");
+                    close = priceDataResults.getDouble("ClosePrice");
                     c.addDay(new MarketDay(ticker, date, open, close));
-                    if (dayNum == 1 || (dayNum - 1) % 60 == 0) {
-                        c.openInterval(date);
-                    }
-                    if (dayNum % 60 == 0) {
-                        c.closeInterval(date);
-                    }
-                    dayNum++;
                 }
+                c.setCompanyClosePrice(close);
 
                 c.adjustForSplits();
 
@@ -234,21 +221,41 @@ public class Assignment3Main {
             }
             return new IndustryData(industry, companies, startDate, endDate, minTradingDays);
         } else {
-            System.out.printf("Insufficient data for %s, no analysis\n", industry);
             return null;
         }
     }
     
     static void processIndustryGains(String industry, IndustryData data) throws SQLException {
-        // In this method, you should calculate the ticker return and industry return. Look at the assignment description to know how to do that
+        PreparedStatement psmtInsertPerformance = writerConn.prepareStatement(insertPerformance);
+        String ticker = "";
+        String startDate = "";
+        String endDate = "";
+        double tickerReturn = 0;
+        double industryReturn = 0;
 
-        // After those calculations, insert the data into the Performance table you created earlier. You may use the following way to do that for each company (or ticker) of an indsutry:
-        // insertPerformanceData.setString(1, industry);
-        // insertPerformanceData.setString(2, ticker);
-        // insertPerformanceData.setString(3, startdate);
-        // insertPerformanceData.setString(4, enddate);
-        // insertPerformanceData.setString(5, String.format("%10.7f", tickerReturn);
-        // insertPerformanceData.setString(6, String.format("%10.7f", industryReturn);
-        // int result = insertPerformanceData.executeUpdate();
+        for (CompanyData c : data.getTickerList()) {
+            for (int i = 1; i < c.getNumDays()-1; i++) {
+                MarketDay d = c.getAdjustedDays().removeLast();
+                if (i == 1 || (i - 1) % 60 == 0) {
+                    c.openInterval(d.getDate(), d.getNewOpening());
+                }
+                if (i % 60 == 0) {
+                    c.closeInterval(d.getDate(), d.getNewClosing());
+                }
+            }
+        industryReturn = data.getIndustryReturn(c);
+        for (int i = 0; i < data.getTickerList().size(); i++) {
+            for (int j = 0; j < data.getTickerList().size(); j++) {
+
+            }
+        }
+        psmtInsertPerformance.setString(1, industry);
+        psmtInsertPerformance.setString(2, ticker);
+        psmtInsertPerformance.setString(3, startDate);
+        psmtInsertPerformance.setString(4, endDate);
+        psmtInsertPerformance.setString(5, String.format("%10.7f", tickerReturn));
+        psmtInsertPerformance.setString(6, String.format("%10.7f", industryReturn));
+        int result = psmtInsertPerformance.executeUpdate();
+        }
     }
 }

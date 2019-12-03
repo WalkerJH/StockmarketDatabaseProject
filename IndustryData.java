@@ -36,4 +36,14 @@ public class IndustryData {
     public int getCommonDays() {
         return commonDays;
     }
+
+    public double getIndustryReturn(CompanyData ignoredCompany) {
+        double industryReturn = 0;
+        double s = 0;
+        for (CompanyData c : tickerList) {
+            s += (c.getCompanyClosePrice()/c.getCompanyOpenPrice());
+        }
+        industryReturn *= s;
+        return industryReturn;
+    }
 }

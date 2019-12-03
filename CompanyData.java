@@ -14,6 +14,8 @@ public class CompanyData {
     private ArrayList<Split> splits;
     private ArrayList<Interval> intervals;
     private int numDays;
+    private double companyOpenPrice;
+    private double companyClosePrice;
 
 
     public CompanyData(String ticker) {
@@ -28,14 +30,28 @@ public class CompanyData {
 
     public Deque<MarketDay> getAdjustedDays() { return adjustedDays; }
 
-    public void addDay(MarketDay m) { days.add(m); }
 
-    public void openInterval(String startDate) {
+    public double getCompanyOpenPrice() { return companyOpenPrice; }
+
+    public double getCompanyClosePrice() { return companyClosePrice; }
+
+    public void addDay(MarketDay m) {
+        if (days.size() == 0)
+            companyOpenPrice = m.getNewOpening();
+        days.add(m);
+    }
+
+    public void setCompanyClosePrice(double price) {
+        this.companyClosePrice = price;
+    }
+
+    public void openInterval(String startDate, double openPrice) {
         intervals.add(new Interval(startDate));
     }
 
-    public void closeInterval(String endDate) {
-        intervals.get(intervals.size()-1).end(endDate);
+    public void closeInterval(String endDate, double closePrice) {
+        intervals.get(intervals.size()-1).setEndDay(endDate);
+        intervals.get(intervals.size()-1).calcTickerReturn(closePrice);
     }
 
     //Adjust data to account for price variance (splits)
@@ -71,6 +87,8 @@ public class CompanyData {
     }
 
     public String getTicker() { return ticker; }
+
+    public int getNumDays() { return numDays; }
 
     public void printAdjustedSplits() {
         for (Split s : splits) {
